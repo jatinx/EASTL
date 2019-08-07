@@ -13,6 +13,7 @@ option(EASTL_BUILD_TESTS "Enable generation of build files for tests" OFF)
 #-------------------------------------------------------------------------------------------
 # Compiler Flags
 #-------------------------------------------------------------------------------------------
+set (CMAKE_CXX_COMPILER "/home/jachaudh/project/HIP/build/install/bin/hipcc")
 set (CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/scripts/CMake")
 include(CommonCppFlags)
 

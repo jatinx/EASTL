@@ -11,6 +11,9 @@
 #include <EABase/nullptr.h>
 #include <stddef.h>
 
+// Adding Hip libs
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 
 #if defined(EA_PRAGMA_ONCE_SUPPORTED)
 	#pragma once // Some compilers (e.g. VC++) benefit significantly from using this. We've measured 3-4% build speed improvements in apps as a result.
@@ -235,14 +238,16 @@ namespace eastl
 				#define pName EASTL_ALLOCATOR_DEFAULT_NAME
 			#endif
 
-			#if EASTL_DLL
+		    void* ptr;
+            #if EASTL_DLL
 				return allocate(n, EASTL_SYSTEM_ALLOCATOR_MIN_ALIGNMENT, 0, flags);
-			#elif (EASTL_DEBUGPARAMS_LEVEL <= 0)
-				return ::new((char*)0, flags, 0, (char*)0,        0) char[n];
-			#elif (EASTL_DEBUGPARAMS_LEVEL == 1)
-				return ::new(   pName, flags, 0, (char*)0,        0) char[n];
+			//#elif (EASTL_DEBUGPARAMS_LEVEL <= 0)
+			//	return ::new((char*)0, flags, 0, (char*)0,        0) char[n];
+			//#elif (EASTL_DEBUGPARAMS_LEVEL == 1)
+			//	return ::new(   pName, flags, 0, (char*)0,        0) char[n];
 			#else
-				return ::new(   pName, flags, 0, __FILE__, __LINE__) char[n];
+                hipMallocManaged(&ptr, n);
+				return ptr;//::new(   pName, flags, 0, __FILE__, __LINE__) char[n];
 			#endif
 		}
 
@@ -257,8 +262,9 @@ namespace eastl
 
 				size_t adjustedAlignment = (alignment > EA_PLATFORM_PTR_SIZE) ? alignment : EA_PLATFORM_PTR_SIZE;
 
-				void* p = new char[n + adjustedAlignment + EA_PLATFORM_PTR_SIZE];
-				void* pPlusPointerSize = (void*)((uintptr_t)p + EA_PLATFORM_PTR_SIZE);
+				void* p; // = new char[n + adjustedAlignment + EA_PLATFORM_PTR_SIZE];
+		        hipMallocManaged(&p, n + adjustedAlignment + EA_PLATFORM_PTR_SIZE);
+		        void* pPlusPointerSize = (void*)((uintptr_t)p + EA_PLATFORM_PTR_SIZE);
 				void* pAligned = (void*)(((uintptr_t)pPlusPointerSize + adjustedAlignment - 1) & ~(adjustedAlignment - 1));
 
 				void** pStoredPtr = (void**)pAligned - 1;
@@ -268,12 +274,14 @@ namespace eastl
 				EASTL_ASSERT(((size_t)pAligned & ~(alignment - 1)) == (size_t)pAligned);
 
 				return pAligned;
-			#elif (EASTL_DEBUGPARAMS_LEVEL <= 0)
-				return ::new(alignment, offset, (char*)0, flags, 0, (char*)0,        0) char[n];
-			#elif (EASTL_DEBUGPARAMS_LEVEL == 1)
-				return ::new(alignment, offset,    pName, flags, 0, (char*)0,        0) char[n];
+			//#elif (EASTL_DEBUGPARAMS_LEVEL <= 0)
+			//	return ::new(alignment, offset, (char*)0, flags, 0, (char*)0,        0) char[n];
+			//#elif (EASTL_DEBUGPARAMS_LEVEL == 1)
+			//	return ::new(alignment, offset,    pName, flags, 0, (char*)0,        0) char[n];
 			#else
-				return ::new(alignment, offset,    pName, flags, 0, __FILE__, __LINE__) char[n];
+                void *ptr;
+                hipMallocManaged(&ptr, n);
+				return ptr;//::new(alignment, offset,    pName, flags, 0, __FILE__, __LINE__) char[n];
 			#endif
 
 			#undef pName  // See above for the definition of this.
@@ -286,10 +294,12 @@ namespace eastl
 				if (p != nullptr)
 				{
 					void* pOriginalAllocation = *((void**)p - 1);
-					delete[](char*)pOriginalAllocation;
+					//delete[](char*)pOriginalAllocation;
+                    hipFree(pOriginalAllocation);
 				}
 			#else
-				delete[](char*)p;
+				//delete[](char*)p;
+                hipFree(p);
 			#endif
 		}
 
